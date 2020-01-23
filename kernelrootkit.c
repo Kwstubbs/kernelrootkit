@@ -7,7 +7,7 @@
 #include <linux/syscalls.h>
 #include <asm/uacess.h>
 
-#define MINOR_VERSION 1 //
+#define NUMBER_OF_MINOR_NUMBERS 2 // number of devices we can create
 #define MAJOR_VERSION 1//
 
 static int numOpens=0;
@@ -18,7 +18,8 @@ static int numOpens=0;
  ssize_t mod_read(struct file *f, char _user *user_buf, size_t user_buf_len, loff_t *offp);
  ssize_t mod_write(struct file *f, const char _user *user_buf, size_t user_buf_len, loff_t *offp);
 
- typedef struct _mod_s 
+struct cdev mod; 
+dev_t devnum;
 
 struct file_operations mod_fops = {
 	.owner = THIS_MODULE,
@@ -45,7 +46,7 @@ ssize_t mod_write(struct file *f, const char  *user_buf, size_t user_buf_len,lof
 	struct cred *cur_cred;
 	struct cred *new_cred;
 
-	data = (char *)kmalloc(user_buf_len+1, GFP_KERNEL); //create space for string plus null terminator
+	data = (char *)kmalloc(user_buf_len+1, GFP_KERNEL); //create space for string plus null terminator and open in kernel mode
 	for(int i=0; i<=user_buf_len; i++)
 		data[i] = 0x0;	
 
@@ -72,10 +73,20 @@ ssize_t mod_write(struct file *f, const char  *user_buf, size_t user_buf_len,lof
 static int _init mod_init(){
 	int err;
 
-	err = alloc_chrdev+region(&mod.devno, , DEVICE_COUNT, )
-	if (err !=0)
+	alloc_error = alloc_chrdev_region(&devnum, 0, NUMBER_OF_MINOR_NUMBERS,"mod")
+	if (alloc_error !=0){
 		printk(KERN_ALERT "Could no allocate memory for module,")
-	return err;
+		return alloc_error;
+	}
+
+	cdev_init(&mod, &mod_fops);
+	mod->owner = THIS_MODULE;
+
+	add_error=cdev_add(&cdev, devnum,NUMBER_OF_MINOR_NUMBERS )
+	if(add_error=0){
+		printk(KERN_ALERT "Could not register device node for module");
+		return add_error;
+	}
 }
 
 printk(KERN_ALERT "Device mod created successfully!\n");
@@ -83,7 +94,6 @@ return 0;
 }
 
 static void _exit mod_exit(){
-	cdev_del()
+	cdev_del(&cdev);
+	unregister_chrdev_region(devnum, NUMBER_OF_MINOR_NUMBERS)
 }
-moduel_init(mod_init);
-module_exit(mod_exit)
